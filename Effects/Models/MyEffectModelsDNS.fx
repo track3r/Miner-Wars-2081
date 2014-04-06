@@ -444,9 +444,7 @@ MyGbufferPixelShaderOutput PixelShaderFunction_Holo(VertexShaderOutput_DNS input
 	if (depth + 0.01f < input.BaseOutput.TexCoordAndViewDistance.z)
 		discard;*/
 
-	//float4 diffuseTexture = tex2D(TextureDiffuseSampler, input.BaseOutput.TexCoordAndViewDistance.xy + CalculateParallax(input.Eye, input.BaseOutput.TexCoordAndViewDistance.xy));
-
-	float4 diffuseTexture = float4(1,1,0,1);
+	float4 diffuseTexture = tex2D(TextureDiffuseSampler, input.BaseOutput.TexCoordAndViewDistance.xy + CalculateParallax(input.Eye, input.BaseOutput.TexCoordAndViewDistance.xy));
 
 	input.TangentToWorld[0] = normalize(input.TangentToWorld[0]);
 	input.TangentToWorld[1] = normalize(input.TangentToWorld[1]);
