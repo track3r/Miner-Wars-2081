@@ -175,7 +175,7 @@ namespace MinerWars.AppCode.Game.Voxels
             //  Create and add into array
             MyVoxelMaterial voxelMaterial = new MyVoxelMaterial(materialEnum, assetName, isIndestructible, useTwoTextures, specularShininess, specularPower, hasBuilderVersion);
             m_materials[(int)materialEnum] = voxelMaterial;
-            m_meshMaterials[(int)materialEnum] = new MyMeshMaterial("Textures\\Voxels\\" + assetName + "_ForAxisXZ", assetName, voxelMaterial.GetTextures().TextureDiffuseForAxisXZ, voxelMaterial.GetTextures().TextureNormalMapForAxisXZ);
+            m_meshMaterials[(int)materialEnum] = new MyMeshMaterial("Textures\\Voxels\\" + assetName + "_ForAxisXZ", assetName, voxelMaterial.GetTextures().TextureDiffuseForAxisXZ, voxelMaterial.GetTextures().TextureNormalMapForAxisXZ, null);
         }
 
 

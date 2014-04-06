@@ -19,9 +19,11 @@ namespace MinerWars.AppCode.Game.Models
     {
         private const string C_CONTENT_ID = "Content\\";
         private const string C_POSTFIX_DIFFUSE = "_d";
+        private const string C_POSTFIX_DIFFUSE_HAVE_HEIGHT = "_dh";
         internal const string C_POSTFIX_DIFFUSE_EMISSIVE = "_de";
         private const string C_POSTFIX_DONT_HAVE_NORMAL = "_dn";
         internal const string C_POSTFIX_NORMAL_SPECULAR = "_ns";
+        internal const string C_POSTFIX_HEIGHT = "_h";
         private const string DEFAULT_DIRECTORY = "\\v01\\";
 
         private IndexBuffer m_IndexBuffer;
@@ -39,6 +41,7 @@ namespace MinerWars.AppCode.Game.Models
         public MyMesh(MyMeshPartInfo meshInfo, string assetName)
         {
             string textureName = null;
+            string heightName = null;
 
             MyMaterialDescriptor matDesc = meshInfo.m_MaterialDesc;
             if (matDesc != null)
@@ -73,10 +76,22 @@ namespace MinerWars.AppCode.Game.Models
                     }
                 }
 
+                //TODO: hardcode to test paralax mapping
+                textureName = @"Textures2\Models\stone";
+
+                heightName = textureName + C_POSTFIX_HEIGHT;
+                if (!File.Exists(Path.Combine(MyMinerGame.Static.RootDirectory, heightName) + ".dds") &&
+                    !File.Exists(Path.Combine(MyMinerGame.Static.RootDirectory, heightName) + ".png"))
+                {
+                    heightName = null;
+                }
+
                 var defaultMaterial = new MyMeshMaterial(matDesc.MaterialName,
                                                          textureName + C_POSTFIX_DIFFUSE_EMISSIVE,
-                                                         textureName + C_POSTFIX_NORMAL_SPECULAR, matDesc.m_Glossiness,
-                                                         hasNormalTexture, ref matDesc.m_DiffuseColor,
+                                                         textureName + C_POSTFIX_NORMAL_SPECULAR, 
+                                                         heightName,
+                                                         matDesc.m_Glossiness,
+                                                         hasNormalTexture, heightName != null, ref matDesc.m_DiffuseColor,
                                                          ref matDesc.m_SpecularColor);
 
                 // check for alternative textures and create corresponding materials.
@@ -101,6 +116,7 @@ namespace MinerWars.AppCode.Game.Models
                         string newFolder = "\\v" + String.Format("{0:00}", j + 1) + "\\";
                         string newNameDiffuse = textureName.Replace(DEFAULT_DIRECTORY, newFolder) + C_POSTFIX_DIFFUSE_EMISSIVE;
                         string newNameNormal = textureName.Replace(DEFAULT_DIRECTORY, newFolder) + C_POSTFIX_NORMAL_SPECULAR;
+                        string newNameheight = textureName.Replace(DEFAULT_DIRECTORY, newFolder) + C_POSTFIX_HEIGHT;
 
                         string diffusepath = Path.Combine(MyMinerGame.Static.RootDirectory, newNameDiffuse) + ".dds";
                         if (!File.Exists(diffusepath))
@@ -109,10 +125,13 @@ namespace MinerWars.AppCode.Game.Models
                         if (!File.Exists(Path.Combine(MyMinerGame.Static.RootDirectory, newNameNormal) + ".dds"))
                             newNameNormal = textureName + C_POSTFIX_NORMAL_SPECULAR;
 
+                        if (!File.Exists(Path.Combine(MyMinerGame.Static.RootDirectory, newNameheight) + ".dds"))
+                            newNameheight = heightName;
+
                         Materials[j] = new MyMeshMaterial(          matDesc.MaterialName,
-                                                                    newNameDiffuse, newNameNormal,
+                                                                    newNameDiffuse, newNameNormal, newNameheight,
                                                                       matDesc.m_Glossiness,
-                                                                      hasNormalTexture, ref matDesc.m_DiffuseColor,
+                                                                      hasNormalTexture, newNameheight != null, ref matDesc.m_DiffuseColor,
                                                                       ref matDesc.m_SpecularColor);
                     }
                 }
@@ -128,7 +147,7 @@ namespace MinerWars.AppCode.Game.Models
                 //We define at least debug material
                 MinerWarsMath.Vector3 color = MinerWarsMath.Color.Pink.ToVector3();
                 Materials = new MyMeshMaterial[8];
-                Materials[0] = new MyMeshMaterial("", null, null, 0, true, ref color, ref color);
+                Materials[0] = new MyMeshMaterial("", null, null, null, 0, true, false, ref color, ref color);
                 for (int j = 1; j < Materials.Length; j++)
                 {
                     Materials[j] = Materials[0];

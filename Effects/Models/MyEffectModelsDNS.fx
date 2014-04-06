@@ -45,34 +45,14 @@ sampler TextureNormalSampler = sampler_state
 	AddressV = WRAP;
 };
 
-/*
-Texture TextureMask;
-sampler TextureMaskSampler = sampler_state 
+Texture TextureHeight;
+sampler TextureHeightSampler = sampler_state 
 { 
-	texture = <TextureMask> ; 
+	texture = <TextureHeight> ; 
 	mipfilter = LINEAR; 
 	AddressU = WRAP; 
 	AddressV = WRAP;
 };
-
-Texture TextureChannel0;
-sampler TextureChannel0Sampler = sampler_state 
-{ 
-	texture = <TextureChannel0> ; 
-	mipfilter = LINEAR; 
-	AddressU = WRAP; 
-	AddressV = WRAP;
-};
-
-Texture TextureChannel1;
-sampler TextureChannel1Sampler = sampler_state 
-{ 
-	texture = <TextureChannel1> ; 
-	mipfilter = LINEAR; 
-	AddressU = WRAP; 
-	AddressV = WRAP;
-};
-  */
 
 //This sampler is used for HOLO objects
 Texture DepthTextureNear;
@@ -148,6 +128,7 @@ struct VertexShaderOutput_DNS
 {
     VertexShaderOutputLow_DNS BaseOutput;
     float3x3 TangentToWorld : TEXCOORD5;
+    float3 Eye : TEXCOORD4;
 };
 
 struct VertexShaderOutput_DNS_Instanced
@@ -155,42 +136,7 @@ struct VertexShaderOutput_DNS_Instanced
 	VertexShaderOutput_DNS BaseOutput;
 	VertexShaderOutputInstance InstanceOutput;
 };
-		  /*
-// Channels normal & higher
-struct VertexShaderInput_DNS_Channels
-{
-    VertexShaderInput_DNS Input;
-	float2 MaskCoord : TEXCOORD1;
-};
-
-struct VertexShaderOutput_DNS_Channels
-{
-    VertexShaderOutput_DNS Output;
-	float2 MaskCoord : TEXCOORD8;
-};
-			
-// Instance data
-struct VertexShaderInput_Instance
-{
-	float4 worldMatrixRow0 : BLENDWEIGHT0;
- 	float4 worldMatrixRow1 : BLENDWEIGHT1;
- 	float4 worldMatrixRow2 : BLENDWEIGHT2;
- 	float4 worldMatrixRow3 : BLENDWEIGHT3;
-	float4 diffuse : BLENDWEIGHT4;
-	float4 SpecularIntensity_SpecularPower_Emisivity_None : BLENDWEIGHT5;
-	float3 Highlight : BLENDWEIGHT6;
-};
-
-VertexShaderOutputInstance VertexShaderInstance_Base(VertexShaderInput_Instance instanceData)
-{
-	VertexShaderOutputInstance output;
-	output.Diffuse = instanceData.diffuse;
-	output.SpecularIntensity_SpecularPower_Emisivity_None = instanceData.SpecularIntensity_SpecularPower_Emisivity_None;
-	output.Highlight = instanceData.Highlight;
-	return output;
-}
-			*/
-// Low VS
+		
 
 VertexShaderOutputLow_DNS VertexShaderFunctionLow_DNS_Base(VertexShaderInputLow_DNS input, float4x4 world)
 {
@@ -216,20 +162,7 @@ VertexShaderOutputLow_DNS VertexShaderFunctionLow_DNS(VertexShaderInputLow_DNS i
 {
     return VertexShaderFunctionLow_DNS_Base(input, WorldMatrix);
 }
-/*
-VertexShaderOutputLow_DNS_Instanced VertexShaderFunctionLow_DNS_Instanced(VertexShaderInputLow_DNS input, VertexShaderInput_Instance instanceData)
-{
-	float4x4 instanceWorldMatrix = {instanceData.worldMatrixRow0,
-									instanceData.worldMatrixRow1,
-									instanceData.worldMatrixRow2,
-									instanceData.worldMatrixRow3};
 
-	VertexShaderOutputLow_DNS_Instanced output;
-    output.BaseOutput = VertexShaderFunctionLow_DNS_Base(input, instanceWorldMatrix);
-	output.InstanceOutput = VertexShaderInstance_Base(instanceData);
-	return output;
-}
-  */
 // Normal, High, Extreme VS
 
 VertexShaderOutput_DNS VertexShaderFunction_DNS_Base(VertexShaderInput_DNS input, float4x4 world)
@@ -244,6 +177,8 @@ VertexShaderOutput_DNS VertexShaderFunction_DNS_Base(VertexShaderInput_DNS input
     output.TangentToWorld[0] = mul(input.Tangent, (float3x3)world);
     output.TangentToWorld[1] = mul(input.Binormal, (float3x3)world);
     output.TangentToWorld[2] = output.BaseOutput.Normal;
+
+    output.Eye = mul(-input.BaseInput.Position, output.TangentToWorld);
 
     return output;
 }
@@ -314,13 +249,23 @@ float4 PixelShaderFunctionLow_DNS_Forward(VertexShaderOutputForward_DNS input) :
 	return color;
 }
 
-MyGbufferPixelShaderOutput CalculateOutput(VertexShaderOutputLow_DNS input, float3 normal, float specularIntensity, float3 diffuseColor, float3 si_sp_e, float3 highlight)
+float2 CalculateParallax(float3 eye, float2 uv)
+{
+
+	float height = tex2D(TextureHeightSampler, uv).x;
+	float dist = height * 0.034 - 0.004;
+	float3 eyeNorm = normalize(eye);
+	return eyeNorm.xy * dist;
+}
+
+
+MyGbufferPixelShaderOutput CalculateOutput(VertexShaderOutputLow_DNS input, float3 normal, float specularIntensity, float3 diffuseColor, float3 si_sp_e, float3 highlight, float2 uvShift)
 {
 	//To check normals from vertices
 	//normal.xyz = normalize(input.TangentToWorld[2]);    
 	//float3 diffusec = GetNormalVectorIntoRenderTarget(normalize(input.TangentToWorld[1]));
 
-	float4 diffuseTexture = tex2D(TextureDiffuseSampler, input.TexCoordAndViewDistance.xy);
+	float4 diffuseTexture = tex2D(TextureDiffuseSampler, input.TexCoordAndViewDistance.xy + uvShift);
 
 	float3 diffuse = diffuseTexture.xyz * diffuseColor.xyz;
 	//float fogBlend = (input.TexCoordAndViewDistance.z - FogDistanceNear) / (FogDistanceFar - FogDistanceNear);
@@ -339,7 +284,7 @@ MyGbufferPixelShaderOutput CalculateOutput(VertexShaderOutputLow_DNS input, floa
 
 MyGbufferPixelShaderOutput PixelShaderFunctionLow_DNS_Base(VertexShaderOutputLow_DNS input, float3 diffuse, float3 si_sp_e, float3 highlight)
 {
-	return CalculateOutput(input, input.Normal, 1, diffuse, si_sp_e, highlight);
+	return CalculateOutput(input, input.Normal, 1, diffuse, si_sp_e, highlight, float2(1,1));
 }
 
 MyGbufferPixelShaderOutput PixelShaderFunctionLow_DNS(VertexShaderOutputLow_DNS input)
@@ -355,10 +300,8 @@ MyGbufferPixelShaderOutput PixelShaderFunctionLow_DNS_Instanced(VertexShaderOutp
 
 // Normal, High, Extreme PS
 
-MyGbufferPixelShaderOutput PixelShaderFunction_DNS_Base(VertexShaderOutput_DNS input, float3 diffuse, float3 si_sp_e, float3 highlight)
+MyGbufferPixelShaderOutput PixelShaderFunction_DNS_Base(VertexShaderOutput_DNS input, float3 diffuse, float3 si_sp_e, float3 highlight, float2 uvShift)
 {
-	float4 diffuseTexture = tex2D(TextureDiffuseSampler, input.BaseOutput.TexCoordAndViewDistance.xy);
-
 	input.TangentToWorld[0] = normalize(input.TangentToWorld[0]);
 	input.TangentToWorld[1] = normalize(input.TangentToWorld[1]);
 	input.TangentToWorld[2] = normalize(input.TangentToWorld[2]);
@@ -370,7 +313,34 @@ MyGbufferPixelShaderOutput PixelShaderFunction_DNS_Base(VertexShaderOutput_DNS i
 	//float specularIntensity = encodedNormal.x; //swizzled x and w
 	float specularIntensity = encodedNormal.w; //non-swizzled x and w
 	
-	return CalculateOutput(input.BaseOutput, normal, specularIntensity, diffuse, si_sp_e, highlight);
+	return CalculateOutput(input.BaseOutput, normal, specularIntensity, diffuse, si_sp_e, highlight, uvShift);
+}
+
+bool CanRenderParallax(float viewDistance)
+{
+	if(viewDistance < 200)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+MyGbufferPixelShaderOutput PixelShaderFunction_DNS_Parallax(VertexShaderOutput_DNS input)
+{
+	if (IsPixelCut(input.BaseOutput.TexCoordAndViewDistance.w))
+	{
+		discard;
+		return (MyGbufferPixelShaderOutput)0;
+	}
+
+	float2 uvShift = float2(0, 0);
+	if(CanRenderParallax(input.BaseOutput.TexCoordAndViewDistance.w))
+	{
+		uvShift = CalculateParallax(input.Eye, input.BaseOutput.TexCoordAndViewDistance.xy);	
+	}
+	
+	return PixelShaderFunction_DNS_Base(input, DiffuseColor, float3(SpecularIntensity, SpecularPower, Emissivity), Highlight, uvShift);
 }
 
 MyGbufferPixelShaderOutput PixelShaderFunction_DNS(VertexShaderOutput_DNS input)
@@ -390,63 +360,11 @@ MyGbufferPixelShaderOutput PixelShaderFunction_DNS(VertexShaderOutput_DNS input)
 	}
 	else
 	{
-		return PixelShaderFunction_DNS_Base(input, DiffuseColor, float3(SpecularIntensity, SpecularPower, Emissivity), Highlight);
+		float2 uvShift = float2(0, 0);
+		return PixelShaderFunction_DNS_Base(input, DiffuseColor, float3(SpecularIntensity, SpecularPower, Emissivity), Highlight, uvShift);
 	}
 }
-															/*
-MyGbufferPixelShaderOutput PixelShaderFunction_DNS_Instanced(VertexShaderOutput_DNS_Instanced input)
-{
-	float3 si_sp_e = input.InstanceOutput.SpecularIntensity_SpecularPower_Emisivity_None.xyz;
-	return PixelShaderFunction_DNS_Base(input.BaseOutput, input.InstanceOutput.Diffuse, si_sp_e, input.InstanceOutput.Highlight);
-}															  */
-				 /*
-// Rounds normal, return vector where most significant component is 1, others are 0
-float3 RoundNormal(float3 normal)
-{
-	normal = abs(normal);
 
-	float3 normalShift = float3(normal.z, normal.x, normal.y);
-	float3 normalStep = step(normal, normalShift); // return 1 where shift is more
-	return float3(normalStep.y * (1 - normalStep.x), normalStep.z * (1 - normalStep.y), normalStep.x * (1 - normalStep.z));
-}
-				 
-float4 AddChannels(float4 diffuseAndSpecular, float2 maskCoord, float3 worldPos, float3 normal)
-{
-	worldPos /= CHANNEL_TEXTURE_SCALE;
-	
-	normal = RoundNormal(normal);
-	float2 chanCoord = normal.x * worldPos.zy + normal.y * worldPos.xz + normal.z * worldPos.xy;
-	float4 mask = tex2D(TextureMaskSampler, maskCoord);
-
-	float4 chan0 = float4(0,0,0,1) * (1 - mask.x);
-	float4 chan1 = tex2D(TextureChannel1Sampler, chanCoord) * (1 - mask.x);
-
-	chan0.a *= Channel0Intensity;
-	chan1.a *= Channel1Intensity;
-
-	// Channel 1 is on the top of channel 0
-	float4 blend;
-	blend.rgb = lerp(chan0.rgb, chan1.rgb, chan1.a);
-
-	// Combine alpha, example: 0.6 & 0.6 = 0.84
-	blend.a = (1 - (1 - chan0.a) * (1 - chan1.a));
-
-	float power = 3;
-	float v = saturate((blend.a) + 0.5f - pow(0.5f, power));
-	float lerpCoef = pow(v, power);
-
-	float4 res = lerp(diffuseAndSpecular, float4(blend.rgb, diffuseAndSpecular.a * 0.25f), lerpCoef); //we blend to zero spec
-	return res;
-	
-}
-
-MyGbufferPixelShaderOutput PixelShaderFunction_DNS_Channels(VertexShaderOutput_DNS_Channels input)
-{
-	MyGbufferPixelShaderOutput output = PixelShaderFunction_DNS(input.Output);
-	output.DiffuseAndSpecIntensity =  AddChannels(output.DiffuseAndSpecIntensity.rgba * float4(DiffuseColor.xyz, 1) , input.MaskCoord, input.Output.BaseOutput.WorldPos, input.Output.BaseOutput.Normal);
-	return output;
-}
-				   */
 MyGbufferPixelShaderOutput CalculateValuesBlended(VertexShaderOutputLow_DNS input, float4 normal)
 {
 	float4 diffuseTexture = tex2D(TextureDiffuseSampler, input.TexCoordAndViewDistance.xy);
@@ -526,9 +444,10 @@ MyGbufferPixelShaderOutput PixelShaderFunction_Holo(VertexShaderOutput_DNS input
 	if (depth + 0.01f < input.BaseOutput.TexCoordAndViewDistance.z)
 		discard;*/
 
-	float4 diffuseTexture = tex2D(TextureDiffuseSampler, input.BaseOutput.TexCoordAndViewDistance.xy);
+	//float4 diffuseTexture = tex2D(TextureDiffuseSampler, input.BaseOutput.TexCoordAndViewDistance.xy + CalculateParallax(input.Eye, input.BaseOutput.TexCoordAndViewDistance.xy));
 
-	
+	float4 diffuseTexture = float4(1,1,0,1);
+
 	input.TangentToWorld[0] = normalize(input.TangentToWorld[0]);
 	input.TangentToWorld[1] = normalize(input.TangentToWorld[1]);
 	input.TangentToWorld[2] = normalize(input.TangentToWorld[2]);
@@ -562,6 +481,16 @@ MyGbufferPixelShaderOutput PixelShaderFunction_DNS_Masked(VertexShaderOutput_DNS
 		discard;
 
     return PixelShaderFunction_DNS(input);
+}
+
+MyGbufferPixelShaderOutput PixelShaderFunction_DNS_Masked_Parallax(VertexShaderOutput_DNS input)
+{
+	float4 diffuseTexture = tex2D(TextureDiffuseSampler, input.BaseOutput.TexCoordAndViewDistance.xy);
+
+	if (diffuseTexture.a == 0)
+		discard;
+
+    return PixelShaderFunction_DNS_Parallax(input);
 }
 
 float4 PixelShaderFunction_DNS_LowMasked(VertexShaderOutputForward_DNS input) : COLOR
@@ -685,7 +614,7 @@ technique Technique_RenderQualityExtreme
         MaxAnisotropy[2] = 16;
 
         VertexShader = compile vs_3_0 VertexShaderFunction_DNS();
-        PixelShader = compile ps_3_0 PixelShaderFunction_DNS();
+        PixelShader = compile ps_3_0 PixelShaderFunction_DNS_Parallax();
     }
 }
 
@@ -924,7 +853,7 @@ technique Technique_RenderQualityExtremeMasked
         MaxAnisotropy[2] = 16;
 
         VertexShader = compile vs_3_0 VertexShaderFunction_DNS();
-        PixelShader = compile ps_3_0 PixelShaderFunction_DNS_Masked();
+        PixelShader = compile ps_3_0 PixelShaderFunction_DNS_Masked_Parallax();
     }
 }
 		

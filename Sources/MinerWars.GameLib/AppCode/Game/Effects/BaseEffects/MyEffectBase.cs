@@ -126,10 +126,12 @@ namespace MinerWars.AppCode.Game.Effects
 
         public virtual void SetTextureNormal(Texture texture2D) { } 
         public virtual void SetTextureDiffuse(Texture texture2D) { }
+        public virtual void SetTextureHeight(Texture texture2D) { }
 
         public virtual bool IsTextureNormalSet() { return true; }
         public virtual bool IsTextureDiffuseSet() { return true; }
         public virtual bool IsTextureSpecularSet() { return true; }
+        public virtual bool IsTextureHeightSet() { return false; }
 
         public virtual void SetDiffuseColor(MinerWarsMath.Vector3 diffuseColor) { }
         public virtual void SetHighlightColor(MinerWarsMath.Vector3 highlight) { }

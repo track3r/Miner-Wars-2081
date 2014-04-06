@@ -53,6 +53,7 @@ namespace MinerWars.AppCode.Game.Effects
         readonly EffectHandle m_projectionMatrix;
         readonly EffectHandle m_textureDiffuse;
         readonly EffectHandle m_textureNormal;
+        readonly EffectHandle m_textureHeight;
         readonly EffectHandle m_emissivity;
         readonly EffectHandle m_emissivityOffset;
         readonly EffectHandle m_emissivityUVAnim;
@@ -76,6 +77,7 @@ namespace MinerWars.AppCode.Game.Effects
 
         bool m_diffuseTextureSet = false;
         bool m_normalTextureSet = false;
+        bool m_heightTextureSet = false;
         bool m_specularTextureSet = false;
 
         //Techniques 
@@ -137,6 +139,7 @@ namespace MinerWars.AppCode.Game.Effects
 
             m_textureDiffuse = m_D3DEffect.GetParameter(null, "TextureDiffuse");
             m_textureNormal = m_D3DEffect.GetParameter(null, "TextureNormal");
+            m_textureHeight = m_D3DEffect.GetParameter(null, "TextureHeight");
             m_diffuseColor = m_D3DEffect.GetParameter(null, "DiffuseColor");
             m_emissivity = m_D3DEffect.GetParameter(null, "Emissivity");
             m_emissivityOffset = m_D3DEffect.GetParameter(null, "EmissivityOffset");
@@ -217,6 +220,12 @@ namespace MinerWars.AppCode.Game.Effects
             m_normalTextureSet = texture2D != null;
         }
 
+        public override void SetTextureHeight(Texture texture2D)
+        {
+            m_D3DEffect.SetTexture(m_textureHeight, texture2D);
+            m_heightTextureSet = texture2D != null;
+        }
+
         public override bool IsTextureDiffuseSet()
         {
             return m_diffuseTextureSet;
@@ -230,6 +239,11 @@ namespace MinerWars.AppCode.Game.Effects
         public override bool IsTextureNormalSet()
         {
             return m_normalTextureSet;
+        }
+
+        public override bool IsTextureHeightSet()
+        {
+            return m_heightTextureSet;
         }
 
         public override void SetDiffuseColor(Vector3 diffuseColor)

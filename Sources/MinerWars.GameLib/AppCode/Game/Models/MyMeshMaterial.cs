@@ -20,10 +20,12 @@ namespace MinerWars.AppCode.Game.Models
     internal class MyMeshMaterial
     {
         private const string C_FAKE_NORMAL_TEXTURE = "Textures2\\Models\\fake_n";
+        private const string C_FAKE_HEIGHT_TEXTURE = "Textures2\\Models\\fake_h";
 
         public int HashCode;
         private MyTexture2D m_diffuseTex;
         private MyTexture2D m_normalTex;
+        private MyTexture2D m_heightTex;
 
         private float m_specularIntensity = 1f;
         private float m_specularPower = 1f;
@@ -32,8 +34,10 @@ namespace MinerWars.AppCode.Game.Models
 
         private readonly string m_materialName;
         private readonly string m_diffuseName;
+        private readonly string m_heightName;
         private readonly string m_normalName;
         private readonly bool m_hasNormalTexture;
+        private readonly bool m_hasHeightTexture;
         private MyMeshDrawTechnique m_drawTechnique;
         private Vector2 m_emissiveUVAnim;
         private bool m_emissivityEnabled = true;
@@ -133,6 +137,11 @@ namespace MinerWars.AppCode.Game.Models
             get { return m_normalTex; }
             set { m_normalTex = value; ComputeHashCode(); }
         }
+        public MyTexture2D HeightTexture
+        {
+            get { return m_heightTex; }
+            set { m_heightTex = value; ComputeHashCode(); }
+        }
         public float SpecularIntensity
         {
             get { return m_specularIntensity; }
@@ -159,20 +168,22 @@ namespace MinerWars.AppCode.Game.Models
             get { return m_materialName; }
         }
 
-        public MyMeshMaterial(string name, string materialName, MyTexture2D diff, MyTexture2D norm)
+        public MyMeshMaterial(string name, string materialName, MyTexture2D diff, MyTexture2D norm, MyTexture2D height)
         {
             if (name!= null)
             {
                 m_diffuseName = name + MyMesh.C_POSTFIX_DIFFUSE_EMISSIVE;
                 m_normalName = name + MyMesh.C_POSTFIX_NORMAL_SPECULAR;
+                m_heightName = name + MyMesh.C_POSTFIX_HEIGHT;
             }
             m_materialName = materialName;
             m_drawTechnique = MyMeshDrawTechnique.MESH;
             HashCode = 0;
             m_diffuseTex = diff;
             m_normalTex = norm;
+            m_heightTex = height;
             m_hasNormalTexture = m_normalTex != null;
-
+            m_hasHeightTexture = m_heightTex != null;
             ComputeHashCode();
         }
 
@@ -181,7 +192,7 @@ namespace MinerWars.AppCode.Game.Models
         /// </summary>
         /// <param name="specularLevel"></param>
         /// <param name="glossiness"></param>
-        public MyMeshMaterial(string materialName, string diffuseName, string normalName, float glossiness, bool hasNormalTexture, ref Vector3 diffuseColor, ref Vector3 specularColor)
+        public MyMeshMaterial(string materialName, string diffuseName, string normalName, string heightName, float glossiness, bool hasNormalTexture, bool hasHeightTexture, ref Vector3 diffuseColor, ref Vector3 specularColor)
         {
             if (diffuseColor == Vector3.Zero)
             {
@@ -192,10 +203,12 @@ namespace MinerWars.AppCode.Game.Models
             m_materialName = materialName;
             m_diffuseName = diffuseName;
             m_normalName = normalName;
+            m_heightName = heightName;
             m_specularIntensity = specularColor.X; //because of strange 3DSMAX/FBX conversion, specular level from 3ds max converts to .X component of specular color
             m_specularPower = glossiness;
             m_diffuseColor = diffuseColor;
             m_hasNormalTexture = hasNormalTexture;
+            m_hasHeightTexture = hasHeightTexture;
 
             //we are not using specular color directly, we just use it to store extra data (animation of holos)
             m_specularColor = specularColor;
@@ -211,20 +224,32 @@ namespace MinerWars.AppCode.Game.Models
                 return;
             }
 
-            if (m_hasNormalTexture)
+            DiffuseTexture = MyTextureManager.GetTexture<MyTexture2D>(m_diffuseName, CheckTexture, loadingMode);
+            
+            if(MyRenderConstants.RenderQualityProfile.UseNormals)
             {
-                DiffuseTexture = MyTextureManager.GetTexture<MyTexture2D>(m_diffuseName, CheckTexture, loadingMode);
-
-                if (MyRenderConstants.RenderQualityProfile.UseNormals)
+                if (m_hasNormalTexture)
+                {
                     NormalTexture = MyTextureManager.GetTexture<MyTexture2D>(m_normalName, CheckTexture, loadingMode);
-            }
-            else
-            {
-                DiffuseTexture = MyTextureManager.GetTexture<MyTexture2D>(m_diffuseName, CheckTexture, loadingMode);
-
-                if (MyRenderConstants.RenderQualityProfile.UseNormals)
+                }
+                else
+                {
                     NormalTexture = MyTextureManager.GetTexture<MyTexture2D>(C_FAKE_NORMAL_TEXTURE, CheckTexture, loadingMode);
+                }
             }
+
+            if (MyRenderConstants.RenderQualityProfile.UseHeights)
+            {
+                if (m_hasHeightTexture)
+                {
+                    HeightTexture = MyTextureManager.GetTexture<MyTexture2D>(m_heightName, CheckTexture, loadingMode);
+                }
+                else
+                {
+                    HeightTexture = MyTextureManager.GetTexture<MyTexture2D>(C_FAKE_HEIGHT_TEXTURE, CheckTexture, loadingMode);
+                }
+            }
+            
 
             m_loadedContent = true;
         }

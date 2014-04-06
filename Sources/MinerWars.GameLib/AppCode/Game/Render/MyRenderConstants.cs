@@ -76,6 +76,7 @@ namespace MinerWars.AppCode.Game.Render
 
         //Geometry quality
         public bool UseNormals;
+        public bool UseHeights;
         public bool NeedReloadContent;
 
         // Use additional channel textures on models (dirt, rust, etc...)
@@ -191,6 +192,7 @@ namespace MinerWars.AppCode.Game.Render
 
                 //Geometry quality
                 UseNormals = true,
+                UseHeights = false,
                 NeedReloadContent = true, //because normal->high and vertex channels
                 UseChannels = false,
 
@@ -270,6 +272,7 @@ namespace MinerWars.AppCode.Game.Render
 
                 //Geometry quality
                 UseNormals = false,
+                UseHeights = false,
                 NeedReloadContent = true,
                 UseChannels = false,
 
@@ -348,6 +351,7 @@ namespace MinerWars.AppCode.Game.Render
 
                 //Geometry quality
                 UseNormals = true,
+                UseHeights = false,
                 NeedReloadContent = true,
                 UseChannels = true,
 
@@ -426,6 +430,7 @@ namespace MinerWars.AppCode.Game.Render
 
                 //Geometry quality
                 UseNormals = true,
+                UseHeights = true,
                 NeedReloadContent = true,
                 UseChannels = true,
 
